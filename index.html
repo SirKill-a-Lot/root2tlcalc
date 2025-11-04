@@ -33,7 +33,6 @@
   <h2>Output</h2>
   <div id="summary"></div>
   <div id="timelapses"></div>
-  <pre id="debug"></pre>
 
   <script src="script.js"></script>
   <script>
@@ -42,7 +41,6 @@
     function renderResults(res){
       const summary = document.getElementById('summary');
       const tlist = document.getElementById('timelapses');
-      const debug = document.getElementById('debug');
       summary.innerHTML = `<strong>Total Cost:</strong> ${res.rubySpend} — <strong>Recommendation:</strong> ${res.QA ? 'Quick Ascension' : 'Timelapse'}`;
       tlist.innerHTML = '';
       res.timelapses.forEach(t => {
@@ -51,7 +49,6 @@
         div.textContent = `Duration: ${t.type}  Hero: ${t.hero.name}  Level: ${t.hero.lvl}  Zone: ${t.zone} ( +${t.gain} )`;
         tlist.appendChild(div);
       });
-      debug.textContent = JSON.stringify(res, null, 2);
     }
 
     document.getElementById('compute').addEventListener('click', () => {
@@ -72,7 +69,6 @@
       document.getElementById('precision').value = 1;
       document.getElementById('summary').textContent = '';
       document.getElementById('timelapses').textContent = '';
-      document.getElementById('debug').textContent = '';
     });
   </script>
 </body>
