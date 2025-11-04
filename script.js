@@ -1,6 +1,7 @@
 // Portable Java -> JS port of calc.java, hero.java and timelapse.java
-// Preserves hero level snapshots per timelapse so displayed level is the level
-// the hero had when that timelapse was chosen.
+// Fix: compute and capture hero level at selection time using a pure function
+// so the stored snapshot can't be affected by subsequent calcs. This prevents
+// all timelapses showing the same (mutated) level.
 
 // Helper for Math.log10 in older environments (but modern browsers support it)
 if (!Math.log10) Math.log10 = function(x) { return Math.log(x) / Math.LN10; };
@@ -16,39 +17,45 @@ class Hero {
     this.upL = upL || [];
     this.mulChange = mulChange || 0;
     this.newMul = newMul || mult;
-    this.dps = 0;
-    this.lvl = 0;
+    this.dps = 0; // last-calculated DPS (kept for compatibility)
+    this.lvl = 0; // last-calculated level (kept for compatibility)
   }
 
-  calcdps(gold) {
+  // Pure function: compute DPS and level for a given gold without mutating this object
+  dpsAtGold(gold) {
     if (this.cost > gold) {
-      return 0;
-    } else {
-      // Ported verbatim from Java. The original uses Math.log10(costMult) as denominator.
-      // Guard against zero/negative levels to avoid NaN.
-      let raw = (gold - this.cost) / Math.log10(this.costMult);
-      let lvl = Math.floor(raw);
-      if (!isFinite(lvl) || lvl < 0) lvl = 0;
-      this.lvl = lvl;
+      return { dps: 0, lvl: 0 };
+    }
+    // compute lvl the same way as the original port
+    let raw = (gold - this.cost) / Math.log10(this.costMult);
+    let lvl = Math.floor(raw);
+    if (!isFinite(lvl) || lvl < 0) lvl = 0;
 
-      let dps = 0;
-      if (lvl > 0) {
-        // Note: this follows the Java logic in the port.
-        dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl-175) / 25);
-        // Apply Upgrades
-        for (let i = 0; i < this.upL.length; i++) {
-          if (lvl > (this.upL[i] || 0)) {
-            dps = dps + (this.upB[i] || 0);
-          }
-        }
-        // Apply Multiplier Change
-        if (lvl > (this.mulChange || 0)) {
-          dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl-175) / 25;
+    let dps = 0;
+    if (lvl > 0) {
+      // Follow the ported formula (keeps the same numeric behaviour)
+      dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl - 175) / 25);
+      // Apply Upgrades
+      for (let i = 0; i < this.upL.length; i++) {
+        if (lvl > (this.upL[i] || 0)) {
+          dps = dps + (this.upB[i] || 0);
         }
       }
-      this.dps = dps + this.baseDPS;
-      return this.dps;
+      // Apply Multiplier Change
+      if (lvl > (this.mulChange || 0)) {
+        dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl - 175) / 25;
+      }
     }
+    return { dps: dps + this.baseDPS, lvl };
+  }
+
+  // Backwards-compatible: update the hero instance with calcdps(gold)
+  // but this method is NOT used for selection anymore to avoid mutation issues.
+  calcdps(gold) {
+    const res = this.dpsAtGold(gold);
+    this.dps = res.dps;
+    this.lvl = res.lvl;
+    return this.dps;
   }
 }
 
@@ -105,6 +112,7 @@ class Calc {
     heros.push(new Hero("Cadu",700000,1566544,1.22,200000,[10000.0,10000.0,10000.0],[850000.0,1800000.0,2800000.0],3500000,300000));
     heros.push(new Hero("Ceus",700000,1566544,1.22,200000,[10000.0,10000.0,10000.0],[495000.0,1350000.0,2250000.0],3100000,250000));
     heros.push(new Hero("Maw",1050000,2486593,1.22,300000,[10000.0,11000.0,12000.0,13000.0,14000.0],[750000.0,1500000.0,2250000.0,3000000.0,3750000.0],4500000,400000));
+    // Added the provided Yachiyl entry:
     heros.push(new Hero("Yachiyl",1475000,3677116,1.22,500000,[28000.0,29000.0,30000.0,31000.0,32000.0,33000.0],[1500000.0,3200000.0,4900000.0,6600000.0,8400000.0,1040000.0],12100000,1000000));
     return heros;
   }
@@ -234,6 +242,7 @@ class Calc {
     let newZone;
     let best = 0;
     let bestHero = null;
+    let bestHeroLvl = 0; // capture level (pure) for the selected hero
     let rubySpend = 0;
     let rubyCost = 0;
 
@@ -252,13 +261,15 @@ class Calc {
       const gold = this.calcGold(startZone, HS);
       best = 0;
       bestHero = null;
+      bestHeroLvl = 0;
 
-      // Pick optimal hero (this also updates each hero.lvl via calcdps)
+      // Pick optimal hero using the pure dpsAtGold function so we DO NOT mutate hero instances here.
       for (let h of this.heroes) {
-        const hDps = h.calcdps(gold);
+        const { dps: hDps, lvl: hLvl } = h.dpsAtGold(gold);
         if (hDps > best) {
           best = hDps;
           bestHero = h;
+          bestHeroLvl = hLvl;
         }
         if (hDps === 0) {
           break;
@@ -268,7 +279,7 @@ class Calc {
       // If no hero yields positive DPS, break (same behavior as original)
       if (!bestHero) break;
 
-      // Calculate zones gained
+      // Calculate zones gained using the selected hero's DPS
       newZone = this.calcZone(best + gildbonus + dpsHSeffect, TP);
       zonesgained = Math.floor(newZone - startZone);
 
@@ -295,8 +306,8 @@ class Calc {
       newZone = startZone + zonesgained;
       startZone = newZone;
 
-      // Capture hero level snapshot immediately after choosing the hero, before it's mutated later.
-      const heroSnapshot = bestHero ? { name: bestHero.name, lvl: bestHero.lvl } : { name: "No worthwhile timelapse", lvl: 0 };
+      // Capture hero level snapshot immediately after choosing the hero, using the pure level we computed
+      const heroSnapshot = { name: bestHero.name, lvl: bestHeroLvl };
 
       const t = new Timelapse(newZone, zonesgained, tltype, heroSnapshot);
       this.timelapses.push(t);
