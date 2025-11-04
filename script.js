@@ -321,10 +321,7 @@ class Calc {
         }
       }
     }
-    //Catch the case where you spend over 100 rubies and don't reach HZTT
-    if (rubySpend >= 100+ 20 * ((Math.log10(this.heroes[0].lvl) + 1) / 3))){
-      this.QA = true;
-    }
+    
 
     return {
       timelapses: this.timelapses,
