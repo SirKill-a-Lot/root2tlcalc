@@ -285,7 +285,7 @@ class Calc {
 
       // Pick timelapse duration
       let tltype = "8hr";
-      rubyCost = 0;
+      rubyCost = 20;
       if (zonesgained > 360000) {
         tltype = "168hr";
         rubyCost = 100;
@@ -299,7 +299,6 @@ class Calc {
         rubyCost = 40;
         if (zonesgained > 108000) zonesgained = 108000;
       } else if (zonesgained > 36000) {
-        rubyCost = 20;
         zonesgained = 36000;
       }
 
