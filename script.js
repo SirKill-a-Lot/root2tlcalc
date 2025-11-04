@@ -1,5 +1,5 @@
 // Portable Java -> JS port of calc.java, hero.java and timelapse.java
-// Added the missing Yachiyl hero entry provided by you.
+// Added the missing Yachiyl hero entry provided by the user.
 
 // Helper for Math.log10 in older environments (but modern browsers support it)
 if (!Math.log10) Math.log10 = function(x) { return Math.log(x) / Math.LN10; };
