@@ -8,6 +8,7 @@ public class calc
     double TP;
     List<hero> heroes;
     List<timelapse> timelapses = new ArrayList<>();
+    boolean QA = false;
     /**
      * Constructor for objects of class calc
      */
@@ -36,6 +37,8 @@ public class calc
            double newZone;
            double best = 0;
            hero bestHero = null;
+           double rubySpend = 0;
+           double rubyCost = 0;
            while(zonesgained > precision){
                double gildbonus = Math.log10(1.01)*HZTT/10;
                double gold = calcGold(startZone, HS);
@@ -63,31 +66,45 @@ public class calc
                String tltype = "8hr";
                if(zonesgained > 360000){
                    tltype = "168hr";
+                   rubyCost = 100;
                    if(zonesgained > 756000){
                        zonesgained = 756000;
                    }
                }else if(zonesgained > 162000){
                    tltype = "48hr";
+                   rubyCost = 60;
                    if(zonesgained > 216000){
                        zonesgained = 216000;
                    }
                }else if(zonesgained > 72000){
                    tltype = "24hr";
+                   rubyCost = 40;
                    if(zonesgained > 108000){
                        zonesgained = 108000;
                    }
                }else if(zonesgained > 36000){
+                   rubyCost = 20;
                    zonesgained = 36000;
                }
                newZone = startZone+zonesgained;
                startZone = newZone;
-               if(newZone > HZTT){
-                   HZTT = newZone;
-               }
                timelapse t = new timelapse(newZone, zonesgained, tltype, bestHero);
                timelapses.add(t);
+               rubySpend = rubySpend+rubyCost;
+               if(newZone > HZTT){
+                   HZTT = newZone;
+                   if(rubySpend >= 100){
+                        QA = true;
+                   }
+               }
                System.out.println(t.toString());
            }
+           System.out.println("Total Cost: " + rubySpend);
+            if(QA){
+                System.out.println("Reccommendation: Quick Ascension");
+            }else{
+                System.out.println("Reccommendation: Timelapse");
+            }
            //for(timelapse t:timelapses){
            //    System.out.println(t.toString());
            //}
