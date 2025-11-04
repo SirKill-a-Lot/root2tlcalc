@@ -313,15 +313,18 @@ class Calc {
       const t = new Timelapse(newZone, zonesgained, tltype, heroSnapshot);
       this.timelapses.push(t);
       rubySpend = rubySpend + rubyCost;
+
+      // Compute first hero level for QA check — use pure computation at the same gold we used for selection
+      // (this matches the original behavior where hero.lvl was derived from calcdps(gold))
+      const firstHeroLevel = Math.max(1, this.heroes[0].dpsAtGold(gold).lvl || 1);
+      const qaThreshold = 100 + 20 * ((Math.log10(firstHeroLevel) + 1) / 3);
+      if (rubySpend >= qaThreshold) {
+        this.QA = true;
+      }
       if (newZone > HZTT) {
         HZTT = newZone;
-        //Catch the case where you reach HZTT but you spent more than 100 rubies to do so, and dark ritual
-        const firstLvl = Math.max(1, this.heroes[0].lvl || 1); 
-        if (rubySpend >= 100 + 20 * Math.floor(((Math.log10(firstLvl) + 1) / 3))) { this.QA = true; }
       }
     }
-    const firstLvl = Math.max(1, this.heroes[0].lvl || 1); 
-    if (rubySpend >= 100 + 20 * Math.floor(((Math.log10(firstLvl) + 1) / 3))) { this.QA = true; }
     
 
     return {
