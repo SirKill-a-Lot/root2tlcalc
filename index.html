@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>root2tlcalc — JS Port</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; max-width: 900px; margin: 2rem auto; line-height:1.5 }
+    label { display:block; margin-top:0.5rem }
+    input[type="number"] { width: 160px; }
+    pre { background:#f6f8fa; padding:1rem; overflow:auto }
+    .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+    .timelapse { border-bottom:1px solid #eee; padding:0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>root2tlcalc — JS port</h1>
+  <p>This is a quick client-side port of your Java computation. Enter inputs and click "Compute". Results (timelapses, total cost and recommendation) will appear below.</p>
+
+  <form id="form" onsubmit="return false;">
+    <div class="row">
+      <label>TP: <input id="tp" type="number" step="1" value="1"></label>
+      <label>HS: <input id="hs" type="number" step="1" value="0"></label>
+      <label>Xyl: <input id="xyl" type="number" step="1" value="0"></label>
+      <label>HZTT: <input id="hztt" type="number" step="1" value="0"></label>
+      <label>Precision: <input id="precision" type="number" step="1" value="1"></label>
+    </div>
+    <div style="margin-top:1rem">
+      <button id="compute">Compute</button>
+      <button id="reset" type="button">Reset</button>
+    </div>
+  </form>
+
+  <h2>Output</h2>
+  <div id="summary"></div>
+  <div id="timelapses"></div>
+  <pre id="debug"></pre>
+
+  <script src="script.js"></script>
+  <script>
+    const calc = new Calc();
+
+    function renderResults(res){
+      const summary = document.getElementById('summary');
+      const tlist = document.getElementById('timelapses');
+      const debug = document.getElementById('debug');
+      summary.innerHTML = `<strong>Total Cost:</strong> ${res.rubySpend} — <strong>Recommendation:</strong> ${res.QA ? 'Quick Ascension' : 'Timelapse'}`;
+      tlist.innerHTML = '';
+      res.timelapses.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'timelapse';
+        div.textContent = `Duration: ${t.type}  Hero: ${t.hero.name}  Level: ${t.hero.lvl}  Zone: ${t.zone} ( +${t.gain} )`;
+        tlist.appendChild(div);
+      });
+      debug.textContent = JSON.stringify(res, null, 2);
+    }
+
+    document.getElementById('compute').addEventListener('click', () => {
+      const TP = Number(document.getElementById('tp').value);
+      const HS = Number(document.getElementById('hs').value);
+      const xyl = Number(document.getElementById('xyl').value);
+      const HZTT = Number(document.getElementById('hztt').value);
+      const precision = Number(document.getElementById('precision').value);
+      const res = calc.compute({TP, HS, xyl, HZTT, precision});
+      renderResults(res);
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      document.getElementById('tp').value = 1;
+      document.getElementById('hs').value = 0;
+      document.getElementById('xyl').value = 0;
+      document.getElementById('hztt').value = 0;
+      document.getElementById('precision').value = 1;
+      document.getElementById('summary').textContent = '';
+      document.getElementById('timelapses').textContent = '';
+      document.getElementById('debug').textContent = '';
+    });
+  </script>
+</body>
+</html>
