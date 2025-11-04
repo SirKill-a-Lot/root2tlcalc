@@ -16,20 +16,19 @@ class Hero {
     this.upL = upL || [];
     this.mulChange = mulChange || 0;
     this.newMul = newMul || mult;
-    this.dps = 0;
-    this.lvl = 0;
+    this.dps = 0; // last-calculated DPS (kept for compatibility)
+    this.lvl = 0; // last-calculated level (kept for compatibility)
   }
 
-  calcdps(gold) {
+  // Pure function: compute DPS and level for a given gold without mutating this object
+  dpsAtGold(gold) {
     if (this.cost > gold) {
-      return 0;
-    } else {
-      // Ported verbatim from Java. The original uses Math.log10(costMult) as denominator.
-      // Guard against zero/negative levels to avoid NaN.
-      let raw = (gold - this.cost) / Math.log10(this.costMult);
-      let lvl = Math.floor(raw);
-      if (!isFinite(lvl) || lvl < 0) lvl = 0;
-      this.lvl = lvl;
+      return { dps: 0, lvl: 0 };
+    }
+    // compute lvl the same way as the original port
+    let raw = (gold - this.cost) / Math.log10(this.costMult);
+    let lvl = Math.floor(raw);
+    if (!isFinite(lvl) || lvl < 0) lvl = 0;
 
       let dps = 0;
       if (lvl > 0) {
@@ -46,9 +45,21 @@ class Hero {
           dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl-175) / 25;
         }
       }
-      this.dps = dps + this.baseDPS;
-      return this.dps;
+      // Apply Multiplier Change
+      if (lvl > (this.mulChange || 0)) {
+        dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl - 175) / 25;
+      }
     }
+    return { dps: dps + this.baseDPS, lvl };
+  }
+
+  // Backwards-compatible: update the hero instance with calcdps(gold)
+  // but this method is NOT used for selection anymore to avoid mutation issues.
+  calcdps(gold) {
+    const res = this.dpsAtGold(gold);
+    this.dps = res.dps;
+    this.lvl = res.lvl;
+    return this.dps;
   }
 }
 
@@ -234,6 +245,7 @@ class Calc {
     let newZone;
     let best = 0;
     let bestHero = null;
+    let bestHeroLvl = 0; // capture level (pure) for the selected hero
     let rubySpend = 0;
     let rubyCost = 0;
 
@@ -252,13 +264,15 @@ class Calc {
       const gold = this.calcGold(startZone, HS);
       best = 0;
       bestHero = null;
+      bestHeroLvl = 0;
 
       // Pick optimal hero (this also updates each hero.lvl via calcdps)
       for (let h of this.heroes) {
-        const hDps = h.calcdps(gold);
+        const { dps: hDps, lvl: hLvl } = h.dpsAtGold(gold);
         if (hDps > best) {
           best = hDps;
           bestHero = h;
+          bestHeroLvl = hLvl;
         }
         if (hDps === 0) {
           break;
@@ -268,13 +282,13 @@ class Calc {
       // If no hero yields positive DPS, break (same behavior as original)
       if (!bestHero) break;
 
-      // Calculate zones gained
+      // Calculate zones gained using the selected hero's DPS
       newZone = this.calcZone(best + gildbonus + dpsHSeffect, TP);
       zonesgained = Math.floor(newZone - startZone);
-
+      
       // Pick timelapse duration
       let tltype = "8hr";
-      rubyCost = 0;
+      rubyCost = 20;
       if (zonesgained > 360000) {
         tltype = "168hr";
         rubyCost = 100;
@@ -288,8 +302,10 @@ class Calc {
         rubyCost = 40;
         if (zonesgained > 108000) zonesgained = 108000;
       } else if (zonesgained > 36000) {
-        rubyCost = 20;
         zonesgained = 36000;
+      }
+      if(zonesgained < precision){
+        break;
       }
 
       newZone = startZone + zonesgained;
@@ -301,11 +317,19 @@ class Calc {
       const t = new Timelapse(newZone, zonesgained, tltype, heroSnapshot);
       this.timelapses.push(t);
       rubySpend = rubySpend + rubyCost;
+
+      // Compute first hero level for QA check — use pure computation at the same gold we used for selection
+      // (this matches the original behavior where hero.lvl was derived from calcdps(gold))
+      const firstHeroLevel = Math.max(1, this.heroes[0].dpsAtGold(gold).lvl || 1);
+      const qaThreshold = 100 + 20 * ((Math.log10(firstHeroLevel) + 1) / 3);
+      if (rubySpend >= qaThreshold) {
+        this.QA = true;
+      }
       if (newZone > HZTT) {
         HZTT = newZone;
-        if (rubySpend >= 100) this.QA = true;
       }
     }
+    
 
     return {
       timelapses: this.timelapses,
