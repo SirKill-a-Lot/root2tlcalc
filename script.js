@@ -315,9 +315,12 @@ class Calc {
       rubySpend = rubySpend + rubyCost;
       if (newZone > HZTT) {
         HZTT = newZone;
-        if (rubySpend >= 100) this.QA = true;
+        //Catch the case where you reach HZTT but you spent more than 100 rubies to do so, and dark ritual
+        if (rubySpend >= 100 + 20 * ((Math.log10(this.heroes[0].lvl) + 1) / 3))) this.QA = true;
       }
     }
+    //Catch the case where you spend over 100 rubies and don't reach HZTT
+    if (rubySpend >= 100+ 20 * ((Math.log10(this.heroes[0].lvl) + 1) / 3))) this.QA = true;
 
     return {
       timelapses: this.timelapses,
