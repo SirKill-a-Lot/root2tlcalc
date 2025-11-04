@@ -1,6 +1,6 @@
 // Portable Java -> JS port of calc.java, hero.java and timelapse.java
-// Preserves hero level snapshots per timelapse so displayed level is the level
-// the hero had when that timelapse was chosen.
+// Fixed syntax errors, corrected hero snapshot usage and rubyCost default so the script runs again.
+// Also kept the pure dpsAtGold selection and the QA threshold logic you requested.
 
 // Helper for Math.log10 in older environments (but modern browsers support it)
 if (!Math.log10) Math.log10 = function(x) { return Math.log(x) / Math.LN10; };
@@ -30,19 +30,14 @@ class Hero {
     let lvl = Math.floor(raw);
     if (!isFinite(lvl) || lvl < 0) lvl = 0;
 
-      let dps = 0;
-      if (lvl > 0) {
-        // Note: this follows the Java logic in the port.
-        dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl-175) / 25);
-        // Apply Upgrades
-        for (let i = 0; i < this.upL.length; i++) {
-          if (lvl > (this.upL[i] || 0)) {
-            dps = dps + (this.upB[i] || 0);
-          }
-        }
-        // Apply Multiplier Change
-        if (lvl > (this.mulChange || 0)) {
-          dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl-175) / 25;
+    let dps = 0;
+    if (lvl > 0) {
+      // Note: this follows the Java logic in the port.
+      dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl - 175) / 25);
+      // Apply Upgrades
+      for (let i = 0; i < this.upL.length; i++) {
+        if (lvl > (this.upL[i] || 0)) {
+          dps = dps + (this.upB[i] || 0);
         }
       }
       // Apply Multiplier Change
@@ -50,6 +45,7 @@ class Hero {
         dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl - 175) / 25;
       }
     }
+
     return { dps: dps + this.baseDPS, lvl };
   }
 
@@ -266,7 +262,7 @@ class Calc {
       bestHero = null;
       bestHeroLvl = 0;
 
-      // Pick optimal hero (this also updates each hero.lvl via calcdps)
+      // Pick optimal hero using pure dpsAtGold (avoid mutating hero.lvl during selection)
       for (let h of this.heroes) {
         const { dps: hDps, lvl: hLvl } = h.dpsAtGold(gold);
         if (hDps > best) {
@@ -285,11 +281,11 @@ class Calc {
       // Calculate zones gained using the selected hero's DPS
       newZone = this.calcZone(best + gildbonus + dpsHSeffect, TP);
       zonesgained = Math.floor(newZone - startZone);
-      
-      if(zonesgained < precision){
+
+      if (zonesgained < precision) {
         break;
       }
-      
+
       // Pick timelapse duration
       let tltype = "8hr";
       rubyCost = 20;
@@ -312,25 +308,25 @@ class Calc {
       newZone = startZone + zonesgained;
       startZone = newZone;
 
-      // Capture hero level snapshot immediately after choosing the hero, before it's mutated later.
-      const heroSnapshot = bestHero ? { name: bestHero.name, lvl: bestHero.lvl } : { name: "No worthwhile timelapse", lvl: 0 };
-
+      // Capture a snapshot of the hero level at selection time (use the pure bestHeroLvl)
+      const heroSnapshot = { name: bestHero.name, lvl: bestHeroLvl };
       const t = new Timelapse(newZone, zonesgained, tltype, heroSnapshot);
       this.timelapses.push(t);
+
+      // add ruby cost and compute QA using the requested formula (safely)
       rubySpend = rubySpend + rubyCost;
 
       // Compute first hero level for QA check — use pure computation at the same gold we used for selection
-      // (this matches the original behavior where hero.lvl was derived from calcdps(gold))
       const firstHeroLevel = Math.max(1, this.heroes[0].dpsAtGold(gold).lvl || 1);
       const qaThreshold = 100 + 20 * ((Math.log10(firstHeroLevel) + 1) / 3);
       if (rubySpend >= qaThreshold) {
         this.QA = true;
       }
+
       if (newZone > HZTT) {
         HZTT = newZone;
       }
     }
-    
 
     return {
       timelapses: this.timelapses,
