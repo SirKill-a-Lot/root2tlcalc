@@ -282,9 +282,7 @@ class Calc {
       // Calculate zones gained using the selected hero's DPS
       newZone = this.calcZone(best + gildbonus + dpsHSeffect, TP);
       zonesgained = Math.floor(newZone - startZone);
-      if(zonesgained < precision){
-        break;
-      }
+      
       // Pick timelapse duration
       let tltype = "8hr";
       rubyCost = 20;
@@ -302,6 +300,9 @@ class Calc {
         if (zonesgained > 108000) zonesgained = 108000;
       } else if (zonesgained > 36000) {
         zonesgained = 36000;
+      }
+      if(zonesgained < precision){
+        break;
       }
 
       newZone = startZone + zonesgained;
