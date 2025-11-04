@@ -1,5 +1,6 @@
 // Portable Java -> JS port of calc.java, hero.java and timelapse.java
-// Added the missing Yachiyl hero entry provided by the user.
+// Preserves hero level snapshots per timelapse so displayed level is the level
+// the hero had when that timelapse was chosen.
 
 // Helper for Math.log10 in older environments (but modern browsers support it)
 if (!Math.log10) Math.log10 = function(x) { return Math.log(x) / Math.LN10; };
@@ -32,9 +33,8 @@ class Hero {
 
       let dps = 0;
       if (lvl > 0) {
-        // The Java original uses Math.log10(lvl) + (Math.log10(mult) * lvl / 25)
-        // If lvl==0, Math.log10(0) would be -Infinity; we've guarded above.
-        dps = Math.log10(lvl) + (Math.log10(this.mult) * lvl / 25);
+        // Note: this follows the Java logic in the port.
+        dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl-175) / 25);
         // Apply Upgrades
         for (let i = 0; i < this.upL.length; i++) {
           if (lvl > (this.upL[i] || 0)) {
@@ -43,7 +43,7 @@ class Hero {
         }
         // Apply Multiplier Change
         if (lvl > (this.mulChange || 0)) {
-          dps = dps + (Math.log10(this.newMul / this.mult)) * lvl / 25;
+          dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl-175) / 25;
         }
       }
       this.dps = dps + this.baseDPS;
@@ -53,11 +53,17 @@ class Hero {
 }
 
 class Timelapse {
-  constructor(zone, gain, type, hero) {
+  constructor(zone, gain, type, heroSnapshot) {
     this.zone = zone;
     this.gain = gain;
     this.type = type;
-    this.hero = hero ? hero : new Hero("No worthwhile timelapse",0,0,1,1,[],[],0,1);
+    // store a snapshot (plain object) so later changes to hero instances do not mutate the recorded level
+    if (heroSnapshot && typeof heroSnapshot === 'object') {
+      // shallow copy to be safe
+      this.hero = Object.assign({}, heroSnapshot);
+    } else {
+      this.hero = { name: "No worthwhile timelapse", lvl: 0 };
+    }
   }
 }
 
@@ -74,6 +80,8 @@ class Calc {
 
   herosetup() {
     const heros = [];
+    heros.push(new Hero("Betty Clicker",5,3,1.07,4,[103000.0],[4495150.0],0,4));
+    heros.push(new Hero("King Midas",12,9,1.07,4,[108000.0],[4692150.0],0,4));
     heros.push(new Hero("Dread Knight",55,48,1.07,4,[3.0,5.0,7.0],[1000.0,2500.0,5500.0],8000,4.25));
     heros.push(new Hero("Atlas",450,399,1.07,4.25,[5.0,7.0,9.0],[2500.0,9500.0,17500.0],25000,4.5));
     heros.push(new Hero("Terra",1700,1530,1.07,4.5,[5.0,7.0,9.0],[10000.0,32500.0,60000.0],80000,4.75));
@@ -97,7 +105,6 @@ class Calc {
     heros.push(new Hero("Cadu",700000,1566544,1.22,200000,[10000.0,10000.0,10000.0],[850000.0,1800000.0,2800000.0],3500000,300000));
     heros.push(new Hero("Ceus",700000,1566544,1.22,200000,[10000.0,10000.0,10000.0],[495000.0,1350000.0,2250000.0],3100000,250000));
     heros.push(new Hero("Maw",1050000,2486593,1.22,300000,[10000.0,11000.0,12000.0,13000.0,14000.0],[750000.0,1500000.0,2250000.0,3000000.0,3750000.0],4500000,400000));
-    // Added the provided Yachiyl entry:
     heros.push(new Hero("Yachiyl",1475000,3677116,1.22,500000,[28000.0,29000.0,30000.0,31000.0,32000.0,33000.0],[1500000.0,3200000.0,4900000.0,6600000.0,8400000.0,1040000.0],12100000,1000000));
     return heros;
   }
@@ -205,7 +212,7 @@ class Calc {
     return zone;
   }
 
-  // The main compute loop. Returns an object with timelapses array, rubySpend, QA flag and debug info.
+  // The main compute loop. Returns an object with timelapses array, rubySpend and QA flag.
   compute({TP=1, HS=0, xyl=0, HZTT=0, precision=1} = {}) {
     this.TP = TP;
     this.HS = HS;
@@ -246,7 +253,7 @@ class Calc {
       best = 0;
       bestHero = null;
 
-      // Pick optimal hero
+      // Pick optimal hero (this also updates each hero.lvl via calcdps)
       for (let h of this.heroes) {
         const hDps = h.calcdps(gold);
         if (hDps > best) {
@@ -287,7 +294,11 @@ class Calc {
 
       newZone = startZone + zonesgained;
       startZone = newZone;
-      const t = new Timelapse(newZone, zonesgained, tltype, bestHero);
+
+      // Capture hero level snapshot immediately after choosing the hero, before it's mutated later.
+      const heroSnapshot = bestHero ? { name: bestHero.name, lvl: bestHero.lvl } : { name: "No worthwhile timelapse", lvl: 0 };
+
+      const t = new Timelapse(newZone, zonesgained, tltype, heroSnapshot);
       this.timelapses.push(t);
       rubySpend = rubySpend + rubyCost;
       if (newZone > HZTT) {
@@ -299,10 +310,7 @@ class Calc {
     return {
       timelapses: this.timelapses,
       rubySpend,
-      QA: this.QA,
-      // echo inputs and a couple useful debug items:
-      inputs: {TP: this.TP, HS: this.HS, xyl: this.xyl, HZTT: this.HZTT, precision},
-      iterations: iter
+      QA: this.QA
     };
   }
 }
