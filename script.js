@@ -102,7 +102,7 @@ heros.push(new Hero("Chiron",33000,44106,1.16,250,[],[],0,250));
 heros.push(new Hero("Moloch",55000,77006,1.16,300,[],[],0,300));
 heros.push(new Hero("Bomber Max",75000,107982,1.16,350,[],[],0,350));
 heros.push(new Hero("Gog",97000,146342,1.16,444,[],[],0,444));
-heros.push(new Hero("Wepawet",125000,193960,1.16,500,[],[],0,500));
+heros.push(new Hero("Wepwawet",125000,193960,1.16,500,[],[],0,500));
 heros.push(new Hero("Tsuchi",150000,235994,1.19,2500,[1000.0,1000.0,1000.0],[50000.0,135000.0,220000.0],285000,5000));
 heros.push(new Hero("Skogur",175000,289394,1.19,5000,[2000.0,2000.0,2000.0],[100000.0,300000.0,500000.0],600000,10000));
 heros.push(new Hero("Moeru",250000,455593,1.19,10000,[2500.0,2500.0,2500.0],[110000.0,325000.0,475000.0],670000,15000));
@@ -276,7 +276,7 @@ break;
 }
 }
 
-// If no hero yields positive DPS, break (same behavior as original)
+// If no hero yields positive DPS, break 
 if (!bestHero) break;
 
 // Calculate zones gained using the selected hero's DPS
