@@ -34,7 +34,7 @@ class Hero {
       if (lvl > 0) {
         // The Java original uses Math.log10(lvl) + (Math.log10(mult) * lvl / 25)
         // If lvl==0, Math.log10(0) would be -Infinity; we've guarded above.
-        dps = Math.log10(lvl) + (Math.log10(this.mult) * lvl / 25);
+        dps = Math.log10(lvl) + (Math.log10(this.mult) * (lvl-175) / 25);
         // Apply Upgrades
         for (let i = 0; i < this.upL.length; i++) {
           if (lvl > (this.upL[i] || 0)) {
@@ -43,7 +43,7 @@ class Hero {
         }
         // Apply Multiplier Change
         if (lvl > (this.mulChange || 0)) {
-          dps = dps + (Math.log10(this.newMul / this.mult)) * lvl / 25;
+          dps = dps + (Math.log10(this.newMul / this.mult)) * (lvl-175) / 25;
         }
       }
       this.dps = dps + this.baseDPS;
@@ -74,6 +74,8 @@ class Calc {
 
   herosetup() {
     const heros = [];
+    heros.push(new Hero("Betty Clicker",5,3,1.07,4,[103000.0],[4495150.0],0,4));
+    heros.push(new Hero("King Midas",12,9,1.07,4,[108000.0],[4692150.0],0,4));
     heros.push(new Hero("Dread Knight",55,48,1.07,4,[3.0,5.0,7.0],[1000.0,2500.0,5500.0],8000,4.25));
     heros.push(new Hero("Atlas",450,399,1.07,4.25,[5.0,7.0,9.0],[2500.0,9500.0,17500.0],25000,4.5));
     heros.push(new Hero("Terra",1700,1530,1.07,4.5,[5.0,7.0,9.0],[10000.0,32500.0,60000.0],80000,4.75));
