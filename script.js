@@ -323,7 +323,9 @@ rubySpend = rubySpend + rubyCost;
 const firstHeroLevel = Math.max(1, this.heroes[0].dpsAtGold(gold).lvl || 1);
 const qaThreshold = 100 + 20 * ((Math.log10(firstHeroLevel) + 1) / 3);
 if (rubySpend >= qaThreshold) {
-this.QA = true;
+      if(newZone < HZTT){
+            this.QA = true;
+      }
 }
 if (newZone > HZTT) {
 HZTT = newZone;
