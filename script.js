@@ -316,11 +316,12 @@ class Calc {
       if (newZone > HZTT) {
         HZTT = newZone;
         //Catch the case where you reach HZTT but you spent more than 100 rubies to do so, and dark ritual
-        if (rubySpend >= 100 + 20 * ((Math.log10(this.heroes[0].lvl) + 1) / 3)) {
-          this.QA = true;
-        }
+        const firstLvl = Math.max(1, this.heroes[0].lvl || 1); 
+        if (rubySpend >= 100 + 20 * Math.floor(((Math.log10(firstLvl) + 1) / 3))) { this.QA = true; }
       }
     }
+    const firstLvl = Math.max(1, this.heroes[0].lvl || 1); 
+    if (rubySpend >= 100 + 20 * Math.floor(((Math.log10(firstLvl) + 1) / 3))) { this.QA = true; }
     
 
     return {
